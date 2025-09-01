@@ -16,7 +16,7 @@ Complete production-ready Apache Superset setup using Docker Compose.
 Update passwords in `.env`:
 ```bash
 # Generate secure SECRET_KEY
-openssl rand -base64 42
+openssl rand -hex 16
 
 # Edit .env and update:
 # - POSTGRES_PASSWORD
@@ -144,7 +144,7 @@ gunzip -c superset_backup.sql.gz | docker exec -i superset_db psql -U superset s
 ## Production Notes
 
 - Change all default passwords in `.env`
-- Use strong `SUPERSET_SECRET_KEY` (generate with `openssl rand -base64 42`)
+- Use strong `SUPERSET_SECRET_KEY` (generate with `openssl rand -hex 16`)
 - Set up SSL/TLS with reverse proxy (nginx, traefik)
 - Configure database backups
 - Monitor resource usage and scale workers as needed
