@@ -178,35 +178,57 @@ This setup includes comprehensive database driver support:
    - `duckdb:///path/to/your/database.duckdb`
 
 4. In **Advanced** tab, set **Engine Parameters**:
+
+   **Option A: Spatial only (recommended)**
    ```json
    {
      "connect_args": {
        "config": {
          "threads": 16
-       }
+       },
+       "preload_extensions": ["spatial"]
      }
    }
    ```
+   
+   **Option B: Try H3 preloading with unsigned extensions allowed**
+   ```json
+   {
+     "connect_args": {
+       "config": {
+         "threads": 16,
+         "allow_unsigned_extensions": true
+       },
+       "preload_extensions": ["spatial", "h3"]
+     }
+   }
+   ```
+   
+   **Note**: Option B is experimental - if it fails, use Option A and load H3 manually.
 
 ### Spatial Queries
 
 DuckDB spatial extensions are pre-installed in this setup. You can immediately run spatial queries:
 
 ```sql
--- Create spatial points
+-- Spatial operations (always available)
 SELECT ST_Point(1, 2) as point;
-
--- Calculate areas
 SELECT ST_Area(ST_MakeEnvelope(0, 0, 1, 1)) as area;
-
--- Distance calculations
 SELECT ST_Distance(ST_Point(0, 0), ST_Point(3, 4)) as distance;
 
--- Reading Parquet files with spatial data
+-- Now H3 functions work
+SELECT h3_latlng_to_cell(37.7887987, -122.3931578, 9) as h3_index;
+SELECT h3_cell_to_lat(h3_latlng_to_cell(37.7887987, -122.3931578, 9)) as latitude;
+SELECT h3_cell_to_lng(h3_latlng_to_cell(37.7887987, -122.3931578, 9)) as longitude;
+SELECT h3_cell_to_latlng(h3_latlng_to_cell(37.7887987, -122.3931578, 9)) as lat_lng;
+SELECT h3_cell_to_boundary_wkt(h3_latlng_to_cell(37.7887987, -122.3931578, 9)) as boundary;
+
+-- Combined spatial and H3 queries
 SELECT 
     names.primary as name,
     ST_X(geometry) as longitude,
-    ST_Y(geometry) as latitude   
+    ST_Y(geometry) as latitude,
+    h3_latlng_to_cell(ST_Y(geometry), ST_X(geometry), 9) as h3_index
 FROM read_parquet('s3://overturemaps-us-west-2/release/2024-12-18.0/theme=places/type=place/*', 
     filename=true, hive_partitioning=1)
 WHERE categories.primary = 'pizza_restaurant'
@@ -216,19 +238,41 @@ WHERE categories.primary = 'pizza_restaurant'
 
 ### Available DuckDB Extensions
 
-Pre-installed extensions:
-- **spatial**: PostGIS-compatible spatial operations
-- **httpfs**: HTTP/S3 file system access
-- **json**: JSON processing functions
-- **parquet**: Optimized Parquet file reading
+**Core Extensions (preload automatically):**
+- **spatial**: PostGIS-compatible spatial operations (ST_Point, ST_Area, ST_Distance, etc.)
+
+**Community Extensions (manual load required):**
+- **h3**: Uber H3 hexagonal hierarchical geospatial indexing system
+
+### Using H3 Extension
+
+Since H3 is a community extension, you must load it manually in each SQL Lab session:
+
+**Step 1: Load H3 extension (run once per session)**
+```sql
+INSTALL h3 FROM community;
+LOAD h3;
+```
+
+**Step 2: Use H3 functions**
+```sql
+SELECT h3_latlng_to_cell(37.7749, -122.4194, 9) as h3_index;
+```
+
+**Important Notes:**
+- H3 extension is pre-installed during Docker build but must be `LOAD`ed per session
+- Community extensions cannot be included in `preload_extensions`
+- The `INSTALL` command will be fast since H3 is already downloaded
+- You only need to run `INSTALL h3 FROM community; LOAD h3;` once per SQL Lab session
 
 ### DuckDB Best Practices
 
 1. **Performance**: Use `threads` parameter to optimize query performance
-2. **Memory**: DuckDB efficiently handles large datasets in memory
-3. **File Formats**: Parquet files provide best performance for analytics
-4. **Spatial Data**: Use spatial extensions for GIS operations
-5. **Cloud Storage**: Access files directly from S3/HTTP with httpfs extension
+2. **Core Extensions**: Only include core extensions in `preload_extensions: ["spatial"]`
+3. **Community Extensions**: Load H3 manually with `INSTALL h3 FROM community; LOAD h3;`
+4. **Memory**: DuckDB efficiently handles large datasets in memory
+5. **File Formats**: Parquet files provide best performance for analytics
+6. **Spatial Data**: Combine spatial and H3 functions for advanced geospatial analytics
 
 ## Volumes
 

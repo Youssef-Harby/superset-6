@@ -3,8 +3,14 @@ FROM apache/superset:6.0.0rc1
 # Switch to root to install packages
 USER root
 
-# Create data directory
+# Create data directory and install system dependencies
 RUN mkdir -p /app/data && chown -R superset:superset /app/data
+
+# Install ODBC drivers for MS SQL Server support
+RUN apt-get update && apt-get install -y \
+    unixodbc \
+    unixodbc-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install essential database drivers
 RUN /app/docker/pip-install.sh \
@@ -18,22 +24,15 @@ RUN /app/docker/pip-install.sh \
     elasticsearch-dbapi \
     pydruid \
     databricks-sql-connector \
-    "duckdb-engine>=0.17.0" \
+    duckdb \
+    duckdb-engine \
     "shillelagh[gsheetsapi]"
 
+# Copy extension installer script
+COPY load_ext.py /tmp/load_ext.py
+
 # Pre-install DuckDB extensions in uv environment  
-RUN . /app/.venv/bin/activate && python -c "\
-import duckdb; \
-conn = duckdb.connect('/tmp/install_extensions.duckdb'); \
-conn.execute('INSTALL spatial'); \
-conn.execute('LOAD spatial'); \
-conn.execute('INSTALL httpfs'); \
-conn.execute('LOAD httpfs'); \
-conn.execute('INSTALL h3 FROM community'); \
-conn.execute('LOAD h3'); \
-print('DuckDB extensions installed in uv environment'); \
-conn.close(); \
-import os; os.remove('/tmp/install_extensions.duckdb')"
+RUN . /app/.venv/bin/activate && python /tmp/load_ext.py && rm /tmp/load_ext.py
 
 # Switch back to superset user  
 USER superset
