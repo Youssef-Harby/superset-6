@@ -173,9 +173,10 @@ This setup includes comprehensive database driver support:
 1. Go to **Settings** → **Database Connections**
 2. Click **+ Database** → Select **DuckDB**
 3. Set **SQLALCHEMY URI** to one of:
-   - `duckdb:///:memory:` (in-memory database)
-   - `duckdb:///app/superset_home/mydb.duckdb` (persistent file)
-   - `duckdb:///path/to/your/database.duckdb`
+   - `duckdb:///:memory:` (in-memory database)  
+   - `duckdb:///superset_home/mydb.duckdb` (persistent file - relative to /app)
+   - `duckdb://./mydb.duckdb` (current directory)
+   - `duckdb:///path/to/your/database.duckdb` (absolute path)
 
 4. In **Advanced** tab, set **Engine Parameters**:
 

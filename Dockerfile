@@ -26,6 +26,7 @@ RUN /app/docker/pip-install.sh \
     databricks-sql-connector \
     duckdb \
     duckdb-engine \
+    psycopg2-binary \
     "shillelagh[gsheetsapi]"
 
 # Copy extension installer script
